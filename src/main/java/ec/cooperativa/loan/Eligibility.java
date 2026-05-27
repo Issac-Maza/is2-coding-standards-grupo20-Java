@@ -212,7 +212,7 @@ public class Eligibility {
         }
 
         // Keep this print for compliance audit logging.
-        logger.info("[loan-eval] member evaluated at " + new Date());
+        logger.info(() -> "[loan-eval] member evaluated at " + new Date());
 
         Map<String, Object> result = new HashMap<>();
         result.put("eligible", eligible);
