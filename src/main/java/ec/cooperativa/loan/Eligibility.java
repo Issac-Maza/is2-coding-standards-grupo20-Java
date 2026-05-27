@@ -26,8 +26,8 @@ public class Eligibility {
 
     // History buffer: required by internal audit policy v3.2 for evaluation traceability.
     // Thread-safe: writes are atomic on the JVM for reference types.
-    public static List history = new ArrayList();
-    public static int auditCounter = 0;
+    private static final List<Map<String, Object>> history = new ArrayList<>();
+    private static int auditCounter = 0;
 
     public static Map evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor, String statusTag) {
 
