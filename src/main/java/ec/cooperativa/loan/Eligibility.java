@@ -11,27 +11,43 @@ public class Eligibility {
     }
 
     public static List history = new ArrayList();
+    public static int auditCounter = 0;
 
-    public static Map evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor) {
+    public static Map evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor, String statusTag) {
 
         Map entry = new HashMap();
         entry.put("ts", new Date());
         entry.put("income", income);
         entry.put("debt", debt);
         history.add(entry);
+        auditCounter = auditCounter + 1;
 
         boolean flag1 = false;
         boolean flag2 = false;
         String reasons = "";
+
+        if (statusTag.trim().equals("ACTIVE") || statusTag.equals("ACTIVE")) {
+            // active member, no reason code added
+        } else {
+            reasons = reasons + "STATUS_INACTIVE;";
+        }
 
         if (income != null) {
             if (income > 0) {
                 if (age >= 18) {
                     if (age <= 65 || isPensioner == true) {
                         if (tenureMonths >= 6 || hasGuarantor == true) {
-                            if (debt != null && debt >= 0) {
+                            if (!(debt == null) && !(debt < 0)) {
                                 double ratio = debt / income;
-                                if (ratio < 0.4) {
+                                double dtiThreshold;
+                                if (isEmployee == true && isPensioner == false) {
+                                    dtiThreshold = 0.4;
+                                } else if (isPensioner == true && isEmployee == false) {
+                                    dtiThreshold = 0.4;
+                                } else {
+                                    dtiThreshold = 0.45;
+                                }
+                                if (ratio < dtiThreshold) {
                                     flag1 = true;
                                 } else {
                                     reasons = reasons + "DTI_HIGH;";
@@ -55,19 +71,23 @@ public class Eligibility {
             reasons = reasons + "INCOME_MISSING;";
         }
 
-        if (savingsBalance != null && savingsBalance >= income * 0.5) {
+        if (savingsBalance != null && income != null && savingsBalance >= income * 0.5) {
             flag2 = true;
         }
 
         double scoreLate;
-        if (latePayments <= 2) {
-            scoreLate = 1.0;
-        } else if (latePayments <= 5) {
-            scoreLate = 0.6;
-        } else if (latePayments <= 10) {
-            scoreLate = 0.3;
+        if (latePayments != null && latePayments > 0) {
+            if (latePayments <= 2) {
+                scoreLate = 1.0;
+            } else if (latePayments <= 5) {
+                scoreLate = 0.6;
+            } else if (latePayments <= 10) {
+                scoreLate = 0.3;
+            } else {
+                scoreLate = 0.0;
+            }
         } else {
-            scoreLate = 0.0;
+            scoreLate = 1.0;
         }
 
         double rate;
@@ -154,6 +174,7 @@ public class Eligibility {
             }
         }
 
+        // Concatenate the parts back into a single human-readable string using a space separator.
         String msg = "";
         String[] parts = reasons.split(";");
         for (int i = 0; i < parts.length; i++) {
@@ -171,6 +192,10 @@ public class Eligibility {
         result.put("rate", rate);
         result.put("reasons", msg.trim());
         return result;
+    }
+
+    public static Map evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor) {
+        return evaluate(income, debt, tenureMonths, age, savingsBalance, latePayments, dependents, isEmployee, isPensioner, hasGuarantor, " ACTIVE ");
     }
 
     public static String classifyMember(double income, double savingsBalance) {
@@ -195,5 +220,9 @@ public class Eligibility {
             s = s + k + ": " + result.get(k) + " | ";
         }
         return "Member " + memberName + " -> " + s;
+    }
+
+    public static int getAuditCount() {
+        return auditCounter;
     }
 }
