@@ -201,12 +201,11 @@ public class Eligibility {
         }
 
         // Concatenate the parts back into a single human-readable string using a space separator.
-        String msg = "";
+        StringBuilder msg = new StringBuilder();
         String[] parts = reasons.split(";");
-        for (int i = 0; i < parts.length; i++) {
-            String part = parts[i];
-            if (!part.equals("")) {
-                msg = msg + part + " ";
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                msg.append(part).append(" ");
             }
         }
 
