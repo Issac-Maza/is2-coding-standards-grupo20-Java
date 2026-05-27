@@ -58,7 +58,7 @@ public class Eligibility {
                     // Pensioners are exempt from the upper bound.
                     if (age <= 65 || isPensioner) {
                         if (tenureMonths >= 6 || hasGuarantor) {
-                            if (!(debt == null) && !(debt < 0)) {
+                            if (debt != null && debt >= 0) {
                                 double ratio = debt / income;
                                 // DTI threshold per cooperativa policy v2.3:
                                 // 0.4 for employees and pensioners, 0.45 for the residual category.
