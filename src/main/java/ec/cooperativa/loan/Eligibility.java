@@ -139,10 +139,10 @@ public class Eligibility {
             rate = baseRate;
             // Amount in cents to avoid floating-point drift in downstream services.
             amount = income * maxFactor * scoreLate;
-            if (amount > ((Integer) configData.get(KEY_MAX)).doubleValue()) {
-                amount = ((Integer) configData.get(KEY_MAX)).doubleValue();
+            if (amount > ( configData.get(KEY_MAX)).doubleValue()) {
+                amount = ( configData.get(KEY_MAX)).doubleValue();
             }
-            if (amount < ((Integer) configData.get(KEY_MIN)).doubleValue()) {
+            if (amount < ( configData.get(KEY_MIN)).doubleValue()) {
                 amount = -1;
             }
 
@@ -167,10 +167,10 @@ public class Eligibility {
             }
             rate = baseRate;
             amount = income * maxFactor * scoreLate;
-            if (amount > ((Integer) configData.get(KEY_MAX)).doubleValue()) {
-                amount = ((Integer) configData.get(KEY_MAX)).doubleValue();
+            if (amount > ( configData.get(KEY_MAX)).doubleValue()) {
+                amount = ( configData.get(KEY_MAX)).doubleValue();
             }
-            if (amount < ((Integer) configData.get(KEY_MIN)).doubleValue()) {
+            if (amount < ( configData.get(KEY_MIN)).doubleValue()) {
                 amount = -1;
             }
 
@@ -181,8 +181,8 @@ public class Eligibility {
                 double maxFactor = 2.0;
                 rate = baseRate;
                 amount = income * maxFactor * scoreLate;
-                if (amount > ((Integer) configData.get(KEY_MAX)).doubleValue()) {
-                    amount = ((Integer) configData.get(KEY_MAX)).doubleValue();
+                if (amount > ( configData.get(KEY_MAX)).doubleValue()) {
+                    amount = ( configData.get(KEY_MAX)).doubleValue();
                 }
             } catch (Exception e) {
                 // Catches malformed input.
