@@ -155,19 +155,29 @@ public class Eligibility {
     }
 
     /**
+     * Shared rate/amount computation for employee and pensioner categories.
+     * baseRate and incomeFactor differ per category.
+     */
+    private static double[] computeRateAndAmount(
+            double income, double scoreLate,
+            MemberProfile profile, boolean flag2,
+            double baseRate, double minRate, double incomeFactor) {
+
+        if (profile.latePayments > 2)  { baseRate += 0.03 * (profile.latePayments - 2); }
+        if (flag2)                     { baseRate -= 0.01; }
+        if (baseRate < minRate)        { baseRate = minRate; }
+        if (profile.dependents >= 3)   { baseRate += 0.01; }
+        return new double[]{ baseRate, applyBounds(income * incomeFactor * scoreLate) };
+    }
+
+    /**
      * Computes [rate, amount] for the employee category.
      * baseRate 12%, maxFactor 3.5x.
      */
     private static double[] computeEmployee(
             double income, double scoreLate,
             MemberProfile profile, boolean flag2) {
-
-        double baseRate = 0.12;
-        if (profile.latePayments > 2)      { baseRate += 0.03 * (profile.latePayments - 2); }
-        if (flag2)                          { baseRate -= 0.01; }
-        if (baseRate < 0.08)               { baseRate = 0.08; }
-        if (profile.dependents >= 3)       { baseRate += 0.01; }
-        return new double[]{ baseRate, applyBounds(income * 3.5 * scoreLate) };
+        return computeRateAndAmount(income, scoreLate, profile, flag2, 0.12, 0.08, 3.5);
     }
 
     /**
@@ -177,13 +187,7 @@ public class Eligibility {
     private static double[] computePensioner(
             double income, double scoreLate,
             MemberProfile profile, boolean flag2) {
-
-        double baseRate = 0.14;
-        if (profile.latePayments > 2)      { baseRate += 0.03 * (profile.latePayments - 2); }
-        if (flag2)                          { baseRate -= 0.01; }
-        if (baseRate < 0.10)               { baseRate = 0.10; }
-        if (profile.dependents >= 3)       { baseRate += 0.01; }
-        return new double[]{ baseRate, applyBounds(income * 3.0 * scoreLate) };
+        return computeRateAndAmount(income, scoreLate, profile, flag2, 0.14, 0.10, 3.0);
     }
 
     private static double[] computeResidual(double income, double scoreLate) {
