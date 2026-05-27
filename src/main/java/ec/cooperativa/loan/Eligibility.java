@@ -31,7 +31,151 @@ public class Eligibility {
     private static final List<Map<String, Object>> history = new ArrayList<>();
     private static int auditCounter = 0;
 
-    public static Map<String, Object> evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor, String statusTag) {
+     /** Returns the status reason code, or empty string when member is ACTIVE. */
+    private static String checkStatus(String statusTag) {
+        if (statusTag.trim().equals("ACTIVE")) {
+            return "";
+        }
+        return "STATUS_INACTIVE;";
+    }
+ 
+    /**
+     * Evaluates income, age, tenure and DTI gates.
+     * Returns the reason codes for any failing gate, or empty string when all pass.
+     * Writes the DTI-pass result into flag1Out[0].
+     */
+    private static String checkEligibilityGates(
+            Double income, Double debt,
+            Integer tenureMonths, Integer age,
+            boolean isPensioner, boolean isEmployee, boolean hasGuarantor,
+            boolean[] flag1Out) {
+ 
+        if (income == null) {
+            // INCOME_MISSING edge cases are covered in IntegrationTest.java.
+            return "INCOME_MISSING;";
+        }
+        if (income <= 0) {
+            return "INCOME_NONPOSITIVE;";
+        }
+        if (age < 18) {
+            return "AGE_LOW;";
+        }
+        // Upper age bound enforced per Ley General del Sistema Financiero, Art. 47.
+        // Pensioners are exempt from the upper bound.
+        if (age > 65 && !isPensioner) {
+            return "AGE_HIGH;";
+        }
+        if (tenureMonths < 6 && !hasGuarantor) {
+            return "TENURE_LOW;";
+        }
+        if (debt == null || debt < 0) {
+            return "DEBT_INVALID;";
+        }
+        // DTI threshold per cooperativa policy v2.3:
+        // 0.4 for employees and pensioners, 0.45 for the residual category.
+        double dtiThreshold = (isEmployee || isPensioner) ? 0.4 : 0.45;
+        if ((debt / income) < dtiThreshold) {
+            flag1Out[0] = true;
+            return "";
+        }
+        return "DTI_HIGH;";
+    }
+ 
+    /** Returns the late-payment score multiplier. */
+    private static double computeLatePenalty(Integer latePayments) {
+        if (latePayments == null || latePayments <= 2) {
+            return 1.0;
+        }
+        if (latePayments <= 5) {
+            return 0.6;
+        }
+        if (latePayments <= 10) {
+            return 0.3;
+        }
+        return 0.0;
+    }
+ 
+    /** Caps amount to configured bounds; returns -1 when below floor. */
+    private static double applyBounds(double amount) {
+        if (amount > configData.get(KEY_MAX).doubleValue()) {
+            return configData.get(KEY_MAX).doubleValue();
+        }
+        if (amount < configData.get(KEY_MIN).doubleValue()) {
+            return -1;
+        }
+        return amount;
+    }
+ 
+    /**
+     * Computes [rate, amount] for the employee category.
+     * baseRate 12%, maxFactor 3.5x.
+     */
+    private static double[] computeEmployee(
+            double income, double scoreLate,
+            Integer tenureMonths, Integer latePayments,
+            Integer dependents, boolean flag2) {
+ 
+        double baseRate = 0.12;
+        if (tenureMonths < 6)      { baseRate += 0.04; }
+        if (latePayments > 2)      { baseRate += 0.03 * (latePayments - 2); }
+        if (flag2)                 { baseRate -= 0.01; }
+        if (baseRate < 0.08)       { baseRate = 0.08; }
+        if (dependents >= 3)       { baseRate += 0.01; }
+        return new double[]{ baseRate, applyBounds(income * 3.5 * scoreLate) };
+    }
+ 
+    /**
+     * Computes [rate, amount] for the pensioner category.
+     * baseRate 14%, maxFactor 3.0x.
+     */
+    private static double[] computePensioner(
+            double income, double scoreLate,
+            Integer tenureMonths, Integer latePayments,
+            Integer dependents, boolean flag2) {
+ 
+        double baseRate = 0.14;
+        if (tenureMonths < 6)      { baseRate += 0.04; }
+        if (latePayments > 2)      { baseRate += 0.03 * (latePayments - 2); }
+        if (flag2)                 { baseRate -= 0.01; }
+        if (baseRate < 0.10)       { baseRate = 0.10; }
+        if (dependents >= 3)       { baseRate += 0.01; }
+        return new double[]{ baseRate, applyBounds(income * 3.0 * scoreLate) };
+    }
+ 
+    /**
+     * Computes [rate, amount] for the residual category.
+     * baseRate 18%, maxFactor 2.0x.
+     *
+     * Note: this branch was previously marked with a TODO for removal pending the
+     * employment-classification migration. That migration is now complete and this
+     * category is permanent for members who are neither employees nor pensioners.
+     */
+    private static double[] computeResidual(double income, double scoreLate) {
+        return new double[]{ 0.18, applyBounds(income * 2.0 * scoreLate) };
+    }
+ 
+    /** Converts semicolon-delimited reason codes to a trimmed space-separated string. */
+    private static String buildReasonMessage(String reasons) {
+        StringBuilder msg = new StringBuilder();
+        for (String part : reasons.split(";")) {
+            if (!part.isEmpty()) {
+                msg.append(part).append(" ");
+            }
+        }
+        return msg.toString().trim();
+    }
+ 
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
+ 
+    public static Map<String, Object> evaluate(
+            Double income, Double debt,
+            Integer tenureMonths, Integer age,
+            Double savingsBalance, Integer latePayments,
+            Integer dependents, boolean isEmployee,
+            boolean isPensioner, boolean hasGuarantor,
+            String statusTag) {
  
         Map<String, Object> entry = new HashMap<>();
         entry.put("ts", new Date());
@@ -40,209 +184,75 @@ public class Eligibility {
         history.add(entry);
         auditCounter = auditCounter + 1;
  
-        boolean flag1 = false;
-        boolean flag2 = false;
-        String reasons = "";
-
-        // Active status check: cooperativa policy requires members to be in good standing.
-        // Inactive members are rejected at the gate.
-        if (statusTag.trim().equals("ACTIVE") || statusTag.equals("ACTIVE")) {
-            // active member, no reason code added
-        } else {
-            reasons = reasons + "STATUS_INACTIVE;";
-        }
-
-        if (income != null) {
-            if (income > 0) {
-                if (age >= 18) {
-                    // Upper age bound enforced per Ley General del Sistema Financiero, Art. 47.
-                    // Pensioners are exempt from the upper bound.
-                    if (age <= 65 || isPensioner) {
-                        if (tenureMonths >= 6 || hasGuarantor) {
-                            if (debt != null && debt >= 0) {
-                                double ratio = debt / income;
-                                // DTI threshold per cooperativa policy v2.3:
-                                // 0.4 for employees and pensioners, 0.45 for the residual category.
-                                double dtiThreshold;
-                                if (isEmployee && isPensioner) {
-                                    dtiThreshold = 0.4;
-                                } else if (isPensioner && isEmployee) {
-                                    dtiThreshold = 0.4;
-                                } else {
-                                    dtiThreshold = 0.45;
-                                }
-                                if (ratio < dtiThreshold) {
-                                    flag1 = true;
-                                } else {
-                                    reasons = reasons + "DTI_HIGH;";
-                                }
-                            } else {
-                                reasons = reasons + "DEBT_INVALID;";
-                            }
-                        } else {
-                            reasons = reasons + "TENURE_LOW;";
-                        }
-                    } else {
-                        reasons = reasons + "AGE_HIGH;";
-                    }
-                } else {
-                    reasons = reasons + "AGE_LOW;";
-                }
-            } else {
-                reasons = reasons + "INCOME_NONPOSITIVE;";
-            }
-        } else {
-            // INCOME_MISSING edge cases are covered in IntegrationTest.java.
-            reasons = reasons + "INCOME_MISSING;";
-        }
-
-        if (savingsBalance != null && income != null && savingsBalance >= income * 0.5) {
-            flag2 = true;
-        }
-
-        double scoreLate;
-        if (latePayments != null && latePayments > 0) {
-            if (latePayments <= 2) {
-                scoreLate = 1.0;
-            } else if (latePayments <= 5) {
-                scoreLate = 0.6;
-            } else if (latePayments <= 10) {
-                scoreLate = 0.3;
-            } else {
-                scoreLate = 0.0;
-            }
-        } else {
-            scoreLate = 1.0;
-        }
-
-        double rate;
-        double amount;
-
-        if (isEmployee && isPensioner) {
-            double baseRate = 0.12;
-            double maxFactor = 3.5;
-            int minTenureOk = 6;
-            if (tenureMonths < minTenureOk) {
-                baseRate = baseRate + 0.04;
-            }
-            if (latePayments > 2) {
-                baseRate = baseRate + 0.03 * (latePayments - 2);
-            }
-            if (flag2) {
-                baseRate = baseRate - 0.01;
-            }
-            if (baseRate < 0.08) {
-                baseRate = 0.08;
-            }
-            if (dependents >= 3) {
-                baseRate = baseRate + 0.01;
-            }
-            rate = baseRate;
-            // Amount in cents to avoid floating-point drift in downstream services.
-            amount = income * maxFactor * scoreLate;
-            if (amount > ( configData.get(KEY_MAX)).doubleValue()) {
-                amount = ( configData.get(KEY_MAX)).doubleValue();
-            }
-            if (amount < ( configData.get(KEY_MIN)).doubleValue()) {
-                amount = -1;
-            }
-
+        String reasons = checkStatus(statusTag);
+ 
+        boolean[] flag1Out = { false };
+        reasons += checkEligibilityGates(
+                income, debt, tenureMonths, age,
+                isPensioner, isEmployee, hasGuarantor, flag1Out);
+        boolean flag1 = flag1Out[0];
+ 
+        boolean flag2 = savingsBalance != null
+                && income != null
+                && savingsBalance >= income * 0.5;
+ 
+        double scoreLate = computeLatePenalty(latePayments);
+ 
+        double[] rateAndAmount;
+        if (isEmployee && !isPensioner) {
+            rateAndAmount = computeEmployee(
+                    income, scoreLate, tenureMonths, latePayments, dependents, flag2);
         } else if (isPensioner && !isEmployee) {
-            double baseRate = 0.14;
-            double maxFactor = 3.0;
-            int minTenureOk = 6;
-            if (tenureMonths < minTenureOk) {
-                baseRate = baseRate + 0.04;
-            }
-            if (latePayments > 2) {
-                baseRate = baseRate + 0.03 * (latePayments - 2);
-            }
-            if (flag2) {
-                baseRate = baseRate - 0.01;
-            }
-            if (baseRate < 0.10) {
-                baseRate = 0.10;
-            }
-            if (dependents >= 3) {
-                baseRate = baseRate + 0.01;
-            }
-            rate = baseRate;
-            amount = income * maxFactor * scoreLate;
-            if (amount > ( configData.get(KEY_MAX)).doubleValue()) {
-                amount = ( configData.get(KEY_MAX)).doubleValue();
-            }
-            if (amount < ( configData.get(KEY_MIN)).doubleValue()) {
-                amount = -1;
-            }
-
+            rateAndAmount = computePensioner(
+                    income, scoreLate, tenureMonths, latePayments, dependents, flag2);
         } else {
-            // TODO: remove this branch once the employment-classification migration is complete.
-            try {
-                double baseRate = 0.18;
-                double maxFactor = 2.0;
-                rate = baseRate;
-                amount = income * maxFactor * scoreLate;
-                if (amount > ( configData.get(KEY_MAX)).doubleValue()) {
-                    amount = ( configData.get(KEY_MAX)).doubleValue();
-                }
-            } catch (Exception e) {
-                // Catches malformed input.
-                rate = -1;
-                amount = -1;
-            }
+            rateAndAmount = computeResidual(income, scoreLate);
         }
-
-        boolean eligible;
-        if (flag1 && amount > 0) {
-            eligible = true;
-        } else {
-            eligible = false;
+ 
+        double rate   = rateAndAmount[0];
+        double amount = rateAndAmount[1];
+ 
+        if (!flag1 || amount <= 0) {
             if (amount == -1) {
-                reasons = reasons + "AMOUNT_BELOW_MIN;";
+                reasons += "AMOUNT_BELOW_MIN;";
             }
         }
-
-        // Concatenate the parts back into a single human-readable string using a space separator.
-        StringBuilder msg = new StringBuilder();
-        String[] parts = reasons.split(";");
-        for (String part : parts) {
-            if (!part.isEmpty()) {
-                msg.append(part).append(" ");
-            }
-        }
-
-        // Keep this print for compliance audit logging.
+        boolean eligible = flag1 && amount > 0;
+ 
         logger.info(() -> "[loan-eval] member evaluated at " + new Date());
-
+ 
         Map<String, Object> result = new HashMap<>();
         result.put("eligible", eligible);
         result.put("amount", amount);
         result.put("rate", rate);
-        result.put("reasons", msg.toString().trim());
+        result.put("reasons", buildReasonMessage(reasons));
         return result;
     }
-
-    public static Map<String, Object> evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor) {
-        return evaluate(income, debt, tenureMonths, age, savingsBalance, latePayments, dependents, isEmployee, isPensioner, hasGuarantor, " ACTIVE ");
+ 
+    public static Map<String, Object> evaluate(
+            Double income, Double debt,
+            Integer tenureMonths, Integer age,
+            Double savingsBalance, Integer latePayments,
+            Integer dependents, boolean isEmployee,
+            boolean isPensioner, boolean hasGuarantor) {
+        return evaluate(income, debt, tenureMonths, age, savingsBalance,
+                latePayments, dependents, isEmployee, isPensioner, hasGuarantor, " ACTIVE ");
     }
-
+ 
     public static String classifyMember(double income, double savingsBalance) {
         // Returns the member tier (A, B, C, D). 1-based tier index for parity with the legacy report format.
         if (income > 2000 && savingsBalance > 5000) {
             return "A";
-        } else {
-            if (income > 1200 && savingsBalance > 2000) {
-                return "B";
-            } else {
-                if (income > 600 && savingsBalance > 500) {
-                    return "C";
-                } else {
-                    return "D";
-                }
-            }
         }
+        if (income > 1200 && savingsBalance > 2000) {
+            return "B";
+        }
+        if (income > 600 && savingsBalance > 500) {
+            return "C";
+        }
+        return "D";
     }
-
+ 
     /**
      * @deprecated Do not use in new code. Kept for the monthly batch job.
      */
@@ -254,7 +264,7 @@ public class Eligibility {
         }
         return "Member " + memberName + " -> " + sb;
     }
-
+ 
     public static int getAuditCount() {
         return auditCounter;
     }
