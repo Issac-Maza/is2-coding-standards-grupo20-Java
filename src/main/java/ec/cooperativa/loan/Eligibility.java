@@ -142,14 +142,6 @@ public class Eligibility {
         return new double[]{ baseRate, applyBounds(income * 3.0 * scoreLate) };
     }
  
-    /**
-     * Computes [rate, amount] for the residual category.
-     * baseRate 18%, maxFactor 2.0x.
-     *
-     * Note: this branch was previously marked with a TODO for removal pending the
-     * employment-classification migration. That migration is now complete and this
-     * category is permanent for members who are neither employees nor pensioners.
-     */
     private static double[] computeResidual(double income, double scoreLate) {
         return new double[]{ 0.18, applyBounds(income * 2.0 * scoreLate) };
     }
@@ -211,11 +203,8 @@ public class Eligibility {
  
         double rate   = rateAndAmount[0];
         double amount = rateAndAmount[1];
- 
-        if (!flag1 || amount <= 0) {
-            if (amount == -1) {
-                reasons += "AMOUNT_BELOW_MIN;";
-            }
+        if ((!flag1 || amount <= 0) && amount == -1) {
+            reasons += "AMOUNT_BELOW_MIN;";
         }
         boolean eligible = flag1 && amount > 0;
  
