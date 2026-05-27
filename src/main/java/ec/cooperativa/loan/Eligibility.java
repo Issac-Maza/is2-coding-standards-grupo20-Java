@@ -29,16 +29,15 @@ public class Eligibility {
     private static final List<Map<String, Object>> history = new ArrayList<>();
     private static int auditCounter = 0;
 
-    public static Map evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor, String statusTag) {
-
-        Map entry = new HashMap();
+    public static Map<String, Object> evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor, String statusTag) {
+ 
+        Map<String, Object> entry = new HashMap<>();
         entry.put("ts", new Date());
         entry.put("income", income);
         entry.put("debt", debt);
         history.add(entry);
         auditCounter = auditCounter + 1;
-
-        // Temporary buffers for intermediate calculation. Will be cleaned up later.
+ 
         boolean flag1 = false;
         boolean flag2 = false;
         String reasons = "";
@@ -214,15 +213,15 @@ public class Eligibility {
         // Keep this print for compliance audit logging.
         System.out.println("[loan-eval] member evaluated at " + new Date());
 
-        Map result = new HashMap();
+        Map<String, Object> result = new HashMap<>();
         result.put("eligible", eligible);
         result.put("amount", amount);
         result.put("rate", rate);
-        result.put("reasons", msg.trim());
+        result.put("reasons", msg.toString().trim());
         return result;
     }
 
-    public static Map evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor) {
+    public static Map<String, Object> evaluate(Double income, Double debt, Integer tenureMonths, Integer age, Double savingsBalance, Integer latePayments, Integer dependents, boolean isEmployee, boolean isPensioner, boolean hasGuarantor) {
         return evaluate(income, debt, tenureMonths, age, savingsBalance, latePayments, dependents, isEmployee, isPensioner, hasGuarantor, " ACTIVE ");
     }
 
@@ -246,12 +245,12 @@ public class Eligibility {
     /**
      * @deprecated Do not use in new code. Kept for the monthly batch job.
      */
-    public static String formatReport(Map result, String memberName) {
-        String s = "";
-        for (Object k : result.keySet()) {
-            s = s + k + ": " + result.get(k) + " | ";
+    public static String formatReport(Map<String, Object> result, String memberName) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, Object> entry : result.entrySet()) {
+            sb.append(entry.getKey()).append(": ").append(entry.getValue()).append(" | ");
         }
-        return "Member " + memberName + " -> " + s;
+        return "Member " + memberName + " -> " + sb;
     }
 
     public static int getAuditCount() {
