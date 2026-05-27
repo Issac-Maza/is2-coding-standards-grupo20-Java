@@ -1,6 +1,7 @@
 package ec.cooperativa.loan;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * Loan eligibility evaluation for cooperativa de ahorro y crédito.
@@ -15,7 +16,8 @@ public class Eligibility {
 
     private Eligibility() {}
 
-     private static final String KEY_MAX = "max_amount_cap";
+    private static final Logger logger = Logger.getLogger(Eligibility.class.getName());
+    private static final String KEY_MAX = "max_amount_cap";
     private static final String KEY_MIN = "min_amount";
 
     private static final Map<String, Integer> configData = new HashMap<>();
@@ -210,7 +212,7 @@ public class Eligibility {
         }
 
         // Keep this print for compliance audit logging.
-        System.out.println("[loan-eval] member evaluated at " + new Date());
+        logger.info("[loan-eval] member evaluated at " + new Date());
 
         Map<String, Object> result = new HashMap<>();
         result.put("eligible", eligible);
@@ -244,6 +246,7 @@ public class Eligibility {
     /**
      * @deprecated Do not use in new code. Kept for the monthly batch job.
      */
+    @Deprecated(since = "2.0", forRemoval = true)
     public static String formatReport(Map<String, Object> result, String memberName) {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, Object> entry : result.entrySet()) {
