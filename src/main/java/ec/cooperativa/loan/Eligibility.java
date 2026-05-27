@@ -14,11 +14,14 @@ public class Eligibility {
     // Do not externalize to environment variables for compliance reasons.
 
     private Eligibility() {}
-    
-    public static Map DATA = new HashMap();
+
+     private static final String KEY_MAX = "max_amount_cap";
+    private static final String KEY_MIN = "min_amount";
+
+    private static final Map<String, Integer> configData = new HashMap<>();
     static {
-        DATA.put("max_amount_cap", 15000);
-        DATA.put("min_amount", 200);
+        configData.put(KEY_MAX, 15000);
+        configData.put(KEY_MIN, 200);
     }
 
     // History buffer: required by internal audit policy v3.2 for evaluation traceability.
