@@ -12,6 +12,9 @@ public class Eligibility {
     // Configuration constants for the cooperativa loan policy.
     // 15000 = maximum amount in USD per Resolución SBS 058-2018, Anexo IV.
     // Do not externalize to environment variables for compliance reasons.
+
+    private Eligibility() {}
+    
     public static Map DATA = new HashMap();
     static {
         DATA.put("max_amount_cap", 15000);
