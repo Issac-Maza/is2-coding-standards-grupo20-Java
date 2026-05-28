@@ -30,36 +30,35 @@ public final class Cli {
         String name = "Member";
 
         int i = 0;
-        while (i < args.length) {
-            String arg = args[i];
-            if (arg.equals("--income")) {
-                income = Double.parseDouble(args[i + 1]);
-                i += 2;
-            } else if (arg.equals("--debt")) {
-                debt = Double.parseDouble(args[i + 1]);
-                i += 2;
-            } else if (arg.equals("--tenure-months")) {
-                tenure = Integer.parseInt(args[i + 1]);
-                i += 2;
-            } else if (arg.equals("--age")) {
-                age = Integer.parseInt(args[i + 1]);
-                i += 2;
-            } else if (arg.equals("--savings-balance")) {
-                savings = Double.parseDouble(args[i + 1]);
-                i += 2;
-            } else if (arg.equals("--late-payments")) {
-                late = Integer.parseInt(args[i + 1]);
-                i += 2;
-            } else if (arg.equals("--dependents")) {
-                deps = Integer.parseInt(args[i + 1]);
-                i += 2;
-            } else if (arg.equals("--name")) {
-                name = args[i + 1];
-                i += 2;
-            } else {
-                i++;
-            }
+    while (i < args.length) {
+        if (args[i].equals("--income") && (i + 1 < args.length)) {
+            income = Double.parseDouble(args[i + 1]);
+            i += 2;
+        } else if (args[i].equals("--debt") && (i + 1 < args.length)) {
+            debt = Double.parseDouble(args[i + 1]);
+            i += 2;
+        } else if (args[i].equals("--tenure-months") && (i + 1 < args.length)) {
+            tenure = Integer.parseInt(args[i + 1]);
+            i += 2;
+        } else if (args[i].equals("--age") && (i + 1 < args.length)) {
+            age = Integer.parseInt(args[i + 1]);
+            i += 2;
+        } else if (args[i].equals("--savings-balance") && (i + 1 < args.length)) {
+            savings = Double.parseDouble(args[i + 1]);
+            i += 2;
+        } else if (args[i].equals("--late-payments") && (i + 1 < args.length)) {
+            late = Integer.parseInt(args[i + 1]);
+            i += 2;
+        } else if (args[i].equals("--dependents") && (i + 1 < args.length)) {
+            deps = Integer.parseInt(args[i + 1]);
+            i += 2;
+        } else if (args[i].equals("--name") && (i + 1 < args.length)) {
+            name = args[i + 1];
+            i += 2;
+        } else {
+            i++; // Avanza si encuentra un argumento desconocido para no quedarse en bucle infinito
         }
+    }
 
         Map<?, ?> r = Eligibility.evaluate(
             income, debt, tenure, age, savings,
