@@ -22,7 +22,7 @@ public class Eligibility {
         DATA.put(KEY_MIN_AMOUNT, 200);
     }
 
-    private static final List<Map<String, Object>> history = new ArrayList<>();
+    static final List<Map<String, Object>> history = new ArrayList<>();
     private static int auditCounter = 0;
 
     private Eligibility() {

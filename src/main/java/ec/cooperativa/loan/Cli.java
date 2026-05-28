@@ -19,7 +19,7 @@ public final class Cli {
      *
      * @param args Argumentos pasados por la terminal.
      */
-    public static void main(final String/index.html] args) {
+    public static void main(final String[] args) {
         double income = 0;
         double debt = 0;
         double savings = 0;
@@ -30,37 +30,56 @@ public final class Cli {
         String name = "Member";
 
         int i = 0;
-    while (i < args.length) {
-        if (args[i].equals("--income") && (i + 1 < args.length)) {
-            income = Double.parseDouble(args[i + 1]);
-            i += 2;
-        } else if (args[i].equals("--debt") && (i + 1 < args.length)) {
-            debt = Double.parseDouble(args[i + 1]);
-            i += 2;
-        } else if (args[i].equals("--tenure-months") && (i + 1 < args.length)) {
-            tenure = Integer.parseInt(args[i + 1]);
-            i += 2;
-        } else if (args[i].equals("--age") && (i + 1 < args.length)) {
-            age = Integer.parseInt(args[i + 1]);
-            i += 2;
-        } else if (args[i].equals("--savings-balance") && (i + 1 < args.length)) {
-            savings = Double.parseDouble(args[i + 1]);
-            i += 2;
-        } else if (args[i].equals("--late-payments") && (i + 1 < args.length)) {
-            late = Integer.parseInt(args[i + 1]);
-            i += 2;
-        } else if (args[i].equals("--dependents") && (i + 1 < args.length)) {
-            deps = Integer.parseInt(args[i + 1]);
-            i += 2;
-        } else if (args[i].equals("--name") && (i + 1 < args.length)) {
-            name = args[i + 1];
-            i += 2;
-        } else {
-            i++; // Avanza si encuentra un argumento desconocido para no quedarse en bucle infinito
-        }
-    }
+        while (i < args.length) {
+            String key = args[i];
+            
+            // Si es el último elemento aislado, no hay valor que procesar para las banderas
+            if (i + 1 >= args.length) {
+                break;
+            }
+            
+            String val = args[i + 1];
 
-        Map<?, ?> r = Eligibility.evaluate(
+            switch (key) {
+                case "--income":
+                    income = Double.parseDouble(val);
+                    i += 2;
+                    break;
+                case "--debt":
+                    debt = Double.parseDouble(val);
+                    i += 2;
+                    break;
+                case "--tenure-months":
+                    tenure = Integer.parseInt(val);
+                    i += 2;
+                    break;
+                case "--age":
+                    age = Integer.parseInt(val);
+                    i += 2;
+                    break;
+                case "--savings-balance":
+                    savings = Double.parseDouble(val);
+                    i += 2;
+                    break;
+                case "--late-payments":
+                    late = Integer.parseInt(val);
+                    i += 2;
+                    break;
+                case "--dependents":
+                    deps = Integer.parseInt(val);
+                    i += 2;
+                    break;
+                case "--name":
+                    name = val;
+                    i += 2;
+                    break;
+                default:
+                    i++; // Argumento no reconocido, avanzar uno de forma segura
+                    break;
+            }
+        }
+
+        Map<String, Object> r = Eligibility.evaluate(
             income, debt, tenure, age, savings,
             late, deps, true, false, false
         );
