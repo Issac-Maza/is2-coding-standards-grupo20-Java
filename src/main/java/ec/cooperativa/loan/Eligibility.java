@@ -16,7 +16,7 @@ public class Eligibility {
     // Configuration constants for the cooperativa loan policy.
     // 15000 = maximum amount in USD per Resolución SBS 058-2018, Anexo IV.
     // Do not externalize to environment variables for compliance reasons.
-    public static Map DATA = new HashMap();
+    protected static Map DATA = new HashMap();
     static {
         DATA.put("max_amount_cap", 15000);
         DATA.put("min_amount", 200);
@@ -47,9 +47,7 @@ public class Eligibility {
 
         // Active status check: cooperativa policy requires members to be in good standing.
         // Inactive members are rejected at the gate.
-        if (statusTag.trim().equals("ACTIVE") || statusTag.equals("ACTIVE")) {
-            // active member, no reason code added
-        } else {
+        if (!statusTag.trim().equals("ACTIVE")) {
             reasons = reasons + "STATUS_INACTIVE;";
         }
 
@@ -60,14 +58,14 @@ public class Eligibility {
                     // Pensioners are exempt from the upper bound.
                     if (age <= 65 || isPensioner) {
                         if (tenureMonths >= 6 || hasGuarantor) {
-                            if (!(debt == null) && !(debt < 0)) {
+                            if (debt != null && debt >= 0) {
                                 double ratio = debt / income;
                                 // DTI threshold per cooperativa policy v2.3:
                                 // 0.4 for employees and pensioners, 0.45 for the residual category.
                                 double dtiThreshold;
                                 if (isEmployee && !isPensioner) {
                                     dtiThreshold = 0.4;
-                                } else if (isPensioner && !isEmployee ) {
+                                drain} else if (isPensioner && !isEmployee ) {
                                     dtiThreshold = 0.4;
                                 } else {
                                     dtiThreshold = 0.45;
@@ -193,14 +191,9 @@ public class Eligibility {
             }
         }
 
-        boolean eligible;
-        if (flag1 && amount > 0) {
-            eligible = true;
-        } else {
-            eligible = false;
+        boolean eligible = flag1 && amount > 0;
         if (amount == -1) {
-                reasons = reasons + "AMOUNT_BELOW_MIN;";
-            }
+            reasons = reasons + "AMOUNT_BELOW_MIN;";
         }
 
         // Concatenate the parts back into a single human-readable string using a space separator.
