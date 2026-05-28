@@ -58,16 +58,16 @@ public class Eligibility {
                 if (age >= 18) {
                     // Upper age bound enforced per Ley General del Sistema Financiero, Art. 47.
                     // Pensioners are exempt from the upper bound.
-                    if (age <= 65 || isPensioner == true) {
-                        if (tenureMonths >= 6 || hasGuarantor == true) {
+                    if (age <= 65 || isPensioner) {
+                        if (tenureMonths >= 6 || hasGuarantor) {
                             if (!(debt == null) && !(debt < 0)) {
                                 double ratio = debt / income;
                                 // DTI threshold per cooperativa policy v2.3:
                                 // 0.4 for employees and pensioners, 0.45 for the residual category.
                                 double dtiThreshold;
-                                if (isEmployee == true && isPensioner == false) {
+                                if (isEmployee && !isPensioner) {
                                     dtiThreshold = 0.4;
-                                } else if (isPensioner == true && isEmployee == false) {
+                                } else if (isPensioner && !isEmployee ) {
                                     dtiThreshold = 0.4;
                                 } else {
                                     dtiThreshold = 0.45;
@@ -119,7 +119,7 @@ public class Eligibility {
         double rate;
         double amount;
 
-        if (isEmployee == true && isPensioner == false) {
+        if (isEmployee && !isPensioner) {
             double baseRate = 0.12;
             double maxFactor = 3.5;
             int minTenureOk = 6;
@@ -129,7 +129,7 @@ public class Eligibility {
             if (latePayments > 2) {
                 baseRate = baseRate + 0.03 * (latePayments - 2);
             }
-            if (flag2 == true) {
+            if (flag2) {
                 baseRate = baseRate - 0.01;
             }
             if (baseRate < 0.08) {
@@ -148,7 +148,7 @@ public class Eligibility {
                 amount = -1;
             }
 
-        } else if (isPensioner == true && isEmployee == false) {
+        } else if (isPensioner && !isEmployee) {
             double baseRate = 0.14;
             double maxFactor = 3.0;
             int minTenureOk = 6;
@@ -158,7 +158,7 @@ public class Eligibility {
             if (latePayments > 2) {
                 baseRate = baseRate + 0.03 * (latePayments - 2);
             }
-            if (flag2 == true) {
+            if (flag2) {
                 baseRate = baseRate - 0.01;
             }
             if (baseRate < 0.10) {
@@ -194,11 +194,11 @@ public class Eligibility {
         }
 
         boolean eligible;
-        if (flag1 == true && amount > 0) {
+        if (flag1 && amount > 0) {
             eligible = true;
         } else {
             eligible = false;
-            if (amount == -1) {
+        if (amount == -1) {
                 reasons = reasons + "AMOUNT_BELOW_MIN;";
             }
         }
