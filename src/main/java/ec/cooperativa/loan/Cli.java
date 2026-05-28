@@ -1,23 +1,70 @@
 package ec.cooperativa.loan;
 
-import java.util.*;
+import java.util.Map;
 
-public class Cli {
-    public static void main(String[] args) {
-        double income = 0, debt = 0, savings = 0;
-        int tenure = 0, age = 0, late = 0, deps = 0;
+/**
+ * Interfaz de línea de comandos para la evaluación de préstamos.
+ */
+public final class Cli {
+
+    /**
+     * Constructor privado para ocultar el constructor por defecto.
+     */
+    private Cli() {
+        // No instanciar clases de utilidad
+    }
+
+    /**
+     * Método principal que procesa los argumentos de la línea de comandos.
+     *
+     * @param args Argumentos pasados por la terminal.
+     */
+    public static void main(final String/index.html] args) {
+        double income = 0;
+        double debt = 0;
+        double savings = 0;
+        int tenure = 0;
+        int age = 0;
+        int late = 0;
+        int deps = 0;
         String name = "Member";
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("--income")) income = Double.parseDouble(args[++i]);
-            else if (args[i].equals("--debt")) debt = Double.parseDouble(args[++i]);
-            else if (args[i].equals("--tenure-months")) tenure = Integer.parseInt(args[++i]);
-            else if (args[i].equals("--age")) age = Integer.parseInt(args[++i]);
-            else if (args[i].equals("--savings-balance")) savings = Double.parseDouble(args[++i]);
-            else if (args[i].equals("--late-payments")) late = Integer.parseInt(args[++i]);
-            else if (args[i].equals("--dependents")) deps = Integer.parseInt(args[++i]);
-            else if (args[i].equals("--name")) name = args[++i];
+
+        int i = 0;
+        while (i < args.length) {
+            String arg = args[i];
+            if (arg.equals("--income")) {
+                income = Double.parseDouble(args[i + 1]);
+                i += 2;
+            } else if (arg.equals("--debt")) {
+                debt = Double.parseDouble(args[i + 1]);
+                i += 2;
+            } else if (arg.equals("--tenure-months")) {
+                tenure = Integer.parseInt(args[i + 1]);
+                i += 2;
+            } else if (arg.equals("--age")) {
+                age = Integer.parseInt(args[i + 1]);
+                i += 2;
+            } else if (arg.equals("--savings-balance")) {
+                savings = Double.parseDouble(args[i + 1]);
+                i += 2;
+            } else if (arg.equals("--late-payments")) {
+                late = Integer.parseInt(args[i + 1]);
+                i += 2;
+            } else if (arg.equals("--dependents")) {
+                deps = Integer.parseInt(args[i + 1]);
+                i += 2;
+            } else if (arg.equals("--name")) {
+                name = args[i + 1];
+                i += 2;
+            } else {
+                i++;
+            }
         }
-        Map r = Eligibility.evaluate(income, debt, tenure, age, savings, late, deps, true, false, false);
-        System.out.println(Eligibility.formatReport(r, name));
+
+        Map<?, ?> r = Eligibility.evaluate(
+            income, debt, tenure, age, savings,
+            late, deps, true, false, false
+        );
+        System.out.println(Eligibility.formatReport(r, name)); // NOSONAR
     }
 }
